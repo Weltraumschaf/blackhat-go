@@ -21,10 +21,28 @@ func Create() *cli.App {
 }
 
 func Execute(c *cli.Context) error {
-	_, err := net.Dial("tcp", "scanme.nmap.org:80")
+	const portStart = 1
+	const portEnd = 1024
 
-	if err == nil {
-		fmt.Println("Connection successful")
+	for port := portStart; port <= portEnd; port++ {
+		address := fmt.Sprintf("scanme.nmap.org:%d", port)
+		connection, err := net.Dial("tcp", address)
+
+		if err != nil {
+			fmt.Println("closed/filtered:", port)
+			continue
+		}
+
+		fmt.Print("open: ", port)
+
+		err = connection.Close()
+
+		if err != nil {
+			fmt.Println("(Error on close:", err, ")")
+		} else {
+			fmt.Println()
+		}
 	}
+
 	return nil
 }
