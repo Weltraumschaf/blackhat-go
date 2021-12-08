@@ -54,7 +54,7 @@ func Execute(c *cli.Context) error {
 	var openPorts []int
 
 	for i := 0; i < cap(ports); i++ {
-		go worker(ports, results)
+		go scan(ports, results, opts.getTarget())
 	}
 
 	go func() {
@@ -82,9 +82,9 @@ func Execute(c *cli.Context) error {
 	return nil
 }
 
-func worker(ports, results chan int) {
+func scan(ports, results chan int, target string) {
 	for port := range ports {
-		address := fmt.Sprintf("scanme.nmap.org:%d", port)
+		address := fmt.Sprintf("%s:%d", target, port)
 		connection, err := net.Dial("tcp", address)
 
 		if err != nil {
