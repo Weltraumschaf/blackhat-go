@@ -31,16 +31,16 @@ func Create() *cli.App {
 				Required: true,
 			},
 			&cli.IntFlag{
-				Name: "start",
+				Name:    "start",
 				Aliases: []string{"s"},
-				Usage: "Start port.",
-				Value: portStart,
+				Usage:   "Start port.",
+				Value:   portStart,
 			},
 			&cli.IntFlag{
-				Name: "end",
+				Name:    "end",
 				Aliases: []string{"e"},
-				Usage: "End port.",
-				Value: portEnd,
+				Usage:   "End port.",
+				Value:   portEnd,
 			},
 		},
 	}
@@ -50,34 +50,51 @@ func Execute(c *cli.Context) error {
 	opts := newOptions(c)
 	ports := make(chan int, maxWorkers)
 	results := make(chan *portResult)
-	var openPorts []*portResult
 
-	for i := 0; i < cap(ports); i++ {
-		go scan(ports, results, opts.getTarget())
-	}
-
-	go func() {
-		for port := opts.getStart(); port <= opts.getEnd(); port++ {
-			ports <- port
-		}
-	}()
-
-	for port := opts.getStart(); port <= opts.getEnd(); port++ {
-		result := <-results
-
-		openPorts = append(openPorts, result)
-	}
+	createScanWorkers(ports, results, opts)
+	go submitPortScans(ports, opts)
+	scannedPorts := collectScanResults(results, opts)
 
 	close(ports)
 	close(results)
 
-	sort.Slice(openPorts, func(i, j int) bool {
-		return openPorts[i].port < openPorts[j].port
-	})
-
-	for _, port := range openPorts {
-		fmt.Println(port)
-	}
+	sortResult(scannedPorts)
+	printResult(scannedPorts)
 
 	return nil
+}
+
+func createScanWorkers(ports chan int, results chan *portResult, opts *options) {
+	for i := 0; i < cap(ports); i++ {
+		go scan(ports, results, opts.getTarget())
+	}
+}
+
+func submitPortScans(ports chan int, opts *options) {
+	for port := opts.getStart(); port <= opts.getEnd(); port++ {
+		ports <- port
+	}
+}
+
+func collectScanResults(results chan *portResult, opts *options) []*portResult {
+	var ports []*portResult
+
+	for port := opts.getStart(); port <= opts.getEnd(); port++ {
+		result := <-results
+		ports = append(ports, result)
+	}
+
+	return ports
+}
+
+func sortResult(scannedPorts []*portResult) {
+	sort.Slice(scannedPorts, func(i, j int) bool {
+		return scannedPorts[i].port < scannedPorts[j].port
+	})
+}
+
+func printResult(scannedPorts []*portResult) {
+	for _, port := range scannedPorts {
+		fmt.Println(port)
+	}
 }
