@@ -7,6 +7,12 @@ import (
 	"sort"
 )
 
+const (
+	portStart  = 1
+	portEnd    = 1024
+	maxWorkers = 100
+)
+
 func Create() *cli.App {
 	return &cli.App{
 		Name:    "scanner",
@@ -18,16 +24,31 @@ func Create() *cli.App {
 			},
 		},
 		Action: Execute,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "target",
+				Aliases:  []string{"t"},
+				Usage:    "The target host to scan.",
+				Required: true,
+			},
+			&cli.IntFlag{
+				Name: "start",
+				Aliases: []string{"s"},
+				Usage: "Start port.",
+				Value: portStart,
+			},
+			&cli.IntFlag{
+				Name: "end",
+				Aliases: []string{"e"},
+				Usage: "End port.",
+				Value: portEnd,
+			},
+		},
 	}
 }
 
-const (
-	portStart  = 1
-	portEnd    = 1024
-	maxWorkers = 100
-)
-
 func Execute(c *cli.Context) error {
+	opts := newOptions(c)
 	ports := make(chan int, maxWorkers)
 	results := make(chan int)
 	var openPorts []int
@@ -37,12 +58,12 @@ func Execute(c *cli.Context) error {
 	}
 
 	go func() {
-		for port := portStart; port <= portEnd; port++ {
+		for port := opts.getStart(); port <= opts.getEnd(); port++ {
 			ports <- port
 		}
 	}()
 
-	for port := portStart; port <= portEnd; port++ {
+	for port := opts.getStart(); port <= opts.getEnd(); port++ {
 		port := <-results
 
 		if port != 0 {
