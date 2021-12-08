@@ -42,6 +42,12 @@ func Create() *cli.App {
 				Usage:   "End port.",
 				Value:   portEnd,
 			},
+			&cli.BoolFlag{
+				Name:    "closed",
+				Aliases: []string{"c"},
+				Usage:   "Show closed or filtered ports in result.",
+				Value:   false,
+			},
 		},
 	}
 }
@@ -59,19 +65,19 @@ func Execute(c *cli.Context) error {
 	close(results)
 
 	sortResult(scannedPorts)
-	printResult(scannedPorts)
+	printResult(scannedPorts, opts)
 
 	return nil
 }
 
 func createScanWorkers(ports chan int, results chan *portResult, opts *options) {
 	for i := 0; i < cap(ports); i++ {
-		go scan(ports, results, opts.getTarget())
+		go scan(ports, results, opts.getTargetHost())
 	}
 }
 
 func submitPortScans(ports chan int, opts *options) {
-	for port := opts.getStart(); port <= opts.getEnd(); port++ {
+	for port := opts.getStartPort(); port <= opts.getEndPort(); port++ {
 		ports <- port
 	}
 }
@@ -79,7 +85,7 @@ func submitPortScans(ports chan int, opts *options) {
 func collectScanResults(results chan *portResult, opts *options) []*portResult {
 	var ports []*portResult
 
-	for port := opts.getStart(); port <= opts.getEnd(); port++ {
+	for port := opts.getStartPort(); port <= opts.getEndPort(); port++ {
 		result := <-results
 		ports = append(ports, result)
 	}
@@ -93,8 +99,12 @@ func sortResult(scannedPorts []*portResult) {
 	})
 }
 
-func printResult(scannedPorts []*portResult) {
+func printResult(scannedPorts []*portResult, opts *options) {
 	for _, port := range scannedPorts {
+		if port.state == closed && opts.isHideClosedPorts() {
+			continue
+		}
+
 		fmt.Println(port)
 	}
 }

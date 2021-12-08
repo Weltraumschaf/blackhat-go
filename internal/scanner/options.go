@@ -3,25 +3,36 @@ package scanner
 import "github.com/urfave/cli/v2"
 
 type options struct {
-	target string
-	start  int
-	end    int
+	targetHost      string
+	startPort       int
+	endPort         int
+	showClosedPorts bool
 }
 
 func newOptions(c *cli.Context) *options {
 	return &options{
-		target: c.String("target"),
-		start:  c.Int("start"),
-		end:    c.Int("end")}
+		targetHost:      c.String("target"),
+		startPort:       c.Int("start"),
+		endPort:         c.Int("end"),
+		showClosedPorts: c.Bool("closed")}
 }
 
-func (o *options) getTarget() string {
-	return o.target
+func (o *options) getTargetHost() string {
+	return o.targetHost
 }
 
-func (o *options) getStart() int {
-	return o.start
+func (o *options) getStartPort() int {
+	return o.startPort
 }
-func (o *options) getEnd() int {
-	return o.end
+
+func (o *options) getEndPort() int {
+	return o.endPort
+}
+
+func (o *options) isShowClosedPorts() bool {
+	return o.showClosedPorts
+}
+
+func (o *options) isHideClosedPorts() bool {
+	return !o.isShowClosedPorts()
 }
