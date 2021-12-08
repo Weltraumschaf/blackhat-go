@@ -13,6 +13,18 @@ const (
 	maxWorkers = 100
 )
 
+type portState string
+
+const (
+	open   portState = "open"
+	closed portState = "closed"
+)
+
+type portResult struct {
+	 port int
+	 state portState
+}
+
 func Create() *cli.App {
 	return &cli.App{
 		Name:    "scanner",
@@ -50,7 +62,7 @@ func Create() *cli.App {
 func Execute(c *cli.Context) error {
 	opts := newOptions(c)
 	ports := make(chan int, maxWorkers)
-	results := make(chan int)
+	results := make(chan *portResult)
 	var openPorts []int
 
 	for i := 0; i < cap(ports); i++ {
@@ -64,10 +76,10 @@ func Execute(c *cli.Context) error {
 	}()
 
 	for port := opts.getStart(); port <= opts.getEnd(); port++ {
-		port := <-results
+		result := <-results
 
-		if port != 0 {
-			openPorts = append(openPorts, port)
+		if result.state == open {
+			openPorts = append(openPorts, result.port)
 		}
 	}
 
@@ -82,17 +94,23 @@ func Execute(c *cli.Context) error {
 	return nil
 }
 
-func scan(ports, results chan int, target string) {
+func scan(ports chan int, results chan *portResult, target string) {
 	for port := range ports {
 		address := fmt.Sprintf("%s:%d", target, port)
 		connection, err := net.Dial("tcp", address)
 
 		if err != nil {
-			results <- 0
+			results <- &portResult{
+				port: port,
+				state: closed,
+			}
 			continue
 		}
 
 		connection.Close()
-		results <- port
+		results <- &portResult{
+			port: port,
+			state: open,
+		}
 	}
 }
