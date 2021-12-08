@@ -19,13 +19,20 @@ build: ## Build the project
 	@echo "Building project ..."
 	mkdir -p $(BIN_DIR)
 	go build -o $(BIN_DIR)/scanner $(PROJECT_DIR)/cmd/scanner/main.go
+	go build -o $(BIN_DIR)/proxy $(PROJECT_DIR)/cmd/proxy/main.go
+
 	@echo "Done!"
 	@echo "Final binary is located in $(BIN_DIR)"
 
-.PHONY: run
-run: ## Run the project's binary.
+.PHONY: run-scanner
+run-scanner: ## Run the project's scanner binary.
 	@echo "Running project ..."
 	go run $(PROJECT_DIR)/cmd/scanner/main.go -t alpha.kn5000.local -s 1 -e 4096
+
+.PHONY: run-proxy
+run-proxy: ## Run the project's proxy binary.
+	@echo "Running project ..."
+	go run $(PROJECT_DIR)/cmd/proxy/main.go
 
 .PHONY: test
 test: build ## Run the unit tests.
