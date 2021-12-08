@@ -25,7 +25,7 @@ build: ## Build the project
 .PHONY: run
 run: ## Run the project's binary.
 	@echo "Running project ..."
-	go run $(PROJECT_DIR)/cmd/scanner/main.go
+	go run $(PROJECT_DIR)/cmd/scanner/main.go -t alpha.kn5000.local -s 1 -e 4096
 
 .PHONY: test
 test: build ## Run the unit tests.

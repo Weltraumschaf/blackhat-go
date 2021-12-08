@@ -3,7 +3,6 @@ package scanner
 import (
 	"fmt"
 	"github.com/urfave/cli/v2"
-	"net"
 	"sort"
 )
 
@@ -12,18 +11,6 @@ const (
 	portEnd    = 1024
 	maxWorkers = 100
 )
-
-type portState string
-
-const (
-	open   portState = "open"
-	closed portState = "closed"
-)
-
-type portResult struct {
-	 port int
-	 state portState
-}
 
 func Create() *cli.App {
 	return &cli.App{
@@ -63,7 +50,7 @@ func Execute(c *cli.Context) error {
 	opts := newOptions(c)
 	ports := make(chan int, maxWorkers)
 	results := make(chan *portResult)
-	var openPorts []int
+	var openPorts []*portResult
 
 	for i := 0; i < cap(ports); i++ {
 		go scan(ports, results, opts.getTarget())
@@ -78,39 +65,19 @@ func Execute(c *cli.Context) error {
 	for port := opts.getStart(); port <= opts.getEnd(); port++ {
 		result := <-results
 
-		if result.state == open {
-			openPorts = append(openPorts, result.port)
-		}
+		openPorts = append(openPorts, result)
 	}
 
 	close(ports)
 	close(results)
-	sort.Ints(openPorts)
+
+	sort.Slice(openPorts, func(i, j int) bool {
+		return openPorts[i].port < openPorts[j].port
+	})
 
 	for _, port := range openPorts {
-		fmt.Printf("%d open\n", port)
+		fmt.Println(port)
 	}
 
 	return nil
-}
-
-func scan(ports chan int, results chan *portResult, target string) {
-	for port := range ports {
-		address := fmt.Sprintf("%s:%d", target, port)
-		connection, err := net.Dial("tcp", address)
-
-		if err != nil {
-			results <- &portResult{
-				port: port,
-				state: closed,
-			}
-			continue
-		}
-
-		connection.Close()
-		results <- &portResult{
-			port: port,
-			state: open,
-		}
-	}
 }
