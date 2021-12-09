@@ -1,11 +1,10 @@
 package proxy
 
 import (
-	"fmt"
 	"github.com/urfave/cli/v2"
 	"io"
 	"log"
-	"os"
+	"net"
 )
 
 func Create() *cli.App {
@@ -23,29 +22,50 @@ func Create() *cli.App {
 }
 
 func Execute(c *cli.Context) error {
-	var (
-		reader FooReader
-		writer FooWriter
-	)
-
-	if _, err := io.Copy(&writer, &reader); err != nil {
-		log.Fatalln("Unable to read/write data")
-		return err
+	listener, err := net.Listen("tcp", ":20080")
+	if err != nil {
+		log.Fatalln("Unable to bind port")
 	}
-	
+
+	log.Println("Listening on 0.0.0.0:20080")
+
+	for {
+		conn, err := listener.Accept()
+		log.Println("Received connection")
+
+		if err != nil {
+			log.Fatalln("Unable to accept connection")
+		}
+
+		go echo(conn)
+	}
+
 	return nil
 }
 
-type FooReader struct {}
+func echo(conn net.Conn) {
+	defer conn.Close()
 
-func (fr *FooReader) Read(b []byte) (int, error) {
-	fmt.Print("in < ")
-	return os.Stdin.Read(b)
-}
+	b := make([]byte, 512)
 
-type FooWriter struct {}
+	for {
+		size, err := conn.Read(b[0:])
 
-func (fw *FooWriter) Write(b []byte) (int, error)  {
-	fmt.Print("out>")
-	return os.Stdout.Write(b)
+		if err == io.EOF {
+			log.Println("Client disconnected")
+			break
+		}
+
+		if err != nil {
+			log.Println("Unexpected error")
+			break
+		}
+
+		log.Printf("Received %d bytes: %s\n", size, string(b))
+		log.Println("Writing data")
+
+		if _, err := conn.Write(b[0:size]); err != nil {
+			log.Fatalln("Unable to write data")
+		}
+	}
 }
