@@ -3,6 +3,7 @@ package proxy
 import (
 	"fmt"
 	"github.com/urfave/cli/v2"
+	"io"
 	"log"
 	"os"
 )
@@ -27,20 +28,11 @@ func Execute(c *cli.Context) error {
 		writer FooWriter
 	)
 
-	input := make([]byte, 4096)
-	s, err := reader.Read(input)
-	if err != nil {
-		log.Fatalln("Unable to read data")
+	if _, err := io.Copy(&writer, &reader); err != nil {
+		log.Fatalln("Unable to read/write data")
+		return err
 	}
-
-	fmt.Printf("Read %d bytes from stdin\n", s)
-
-	s, err = writer.Write(input)
-	if err != nil {
-		log.Fatalln("Unable to write data")
-	}
-
-	fmt.Printf("Wrote %d bytes to stdout\n", s)
+	
 	return nil
 }
 
