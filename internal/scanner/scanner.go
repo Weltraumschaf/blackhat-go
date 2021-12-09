@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"net"
+	"weltraumschaf.de/blackhat/internal/lib"
 )
 
 type portState string
@@ -24,8 +25,8 @@ func (pr portResult) String() string {
 
 func scan(ports chan int, results chan *portResult, target string) {
 	for port := range ports {
-		address := fmt.Sprintf("%s:%d", target, port)
-		connection, err := net.Dial("tcp", address)
+		address := lib.CreateAddress(target, port)
+		connection, err := net.Dial(lib.Tcp.String(), address)
 
 		if err != nil {
 			results <- &portResult{
